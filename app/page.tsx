@@ -1,65 +1,83 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import Link from 'next/link'
+import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+
+const page = () => {
+  const { user, isLoaded } = useUser()
+  const router = useRouter()
+  const [hasRedirected, setHasRedirected] = useState(false)
+
+  useEffect(() => {
+    // Only check redirect logic once user is loaded and we haven't already redirected
+    if (!isLoaded || hasRedirected) return
+
+    // If user is signed in but hasn't completed onboarding, redirect to get-started
+    if (user && !user.publicMetadata?.onboardingComplete) {
+      console.log('🎯 Redirecting new user to get-started')
+      setHasRedirected(true)
+      router.push('/get-started')
+      return
+    }
+
+    // Check URL parameters for post-signup redirect
+    const urlParams = new URLSearchParams(window.location.search)
+    if (user && (urlParams.has('__clerk_db_jwt') || urlParams.has('__clerk_status'))) {
+      console.log('🎯 New signup detected, redirecting to get-started')
+      setHasRedirected(true)
+      router.push('/get-started')
+      return
+    }
+  }, [user, isLoaded, router, hasRedirected])
+
+  // Show loading while checking redirect logic
+  if (!isLoaded || (user && !user.publicMetadata?.onboardingComplete && !hasRedirected)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex flex-col items-center justify-center min-h-screen p-6">
+      <h1 className="text-4xl font-bold mb-8">E-Commerce App</h1>
+
+      {user && (
+        <div className="mb-6 text-center">
+          <p className="text-lg text-gray-700">
+            Welcome back, {user.publicMetadata?.displayName || user.firstName}!
           </p>
+          {user.publicMetadata?.role && (
+            <p className="text-sm text-gray-500">
+              Role: <span className="font-semibold text-blue-600">{user.publicMetadata.role}</span>
+            </p>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      )}
+
+      <div className="space-y-4">
+        <Link
+          href="/token"
+          className="block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-center"
+        >
+          🔐 JWT Token Logger
+        </Link>
+
+        {user && (
+          <Link
+            href="/get-started"
+            className="block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-center"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+            ⚙️ Account Settings
+          </Link>
+        )}
+      </div>
     </div>
-  );
+  )
 }
+
+export default page
